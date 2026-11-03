@@ -14,6 +14,14 @@ from owned_compute.transport import argv
 
 ROOT = Path(__file__).resolve().parent
 DSN = 'dbname=visual_memory_v2 user=emox host=/var/run/postgresql'
+
+
+def resolve_revision(reference):
+    revision=subprocess.check_output(['git','rev-parse','--verify',reference+'^{commit}'],cwd=ROOT,text=True).strip()
+    subprocess.run(['git','merge-base','--is-ancestor',revision,'main'],cwd=ROOT,check=True,timeout=10)
+    return revision
+
+
 INSTALL = r'''
 import json,pathlib,subprocess,sys,socket
 device,revision=sys.argv[1:]
@@ -46,9 +54,10 @@ print(json.dumps(dict(physical_host=socket.gethostname(),source_path=str(root),s
 
 def main():
     parser=argparse.ArgumentParser(__doc__)
-    parser.add_argument('--host',action='append',choices=('office','single5090','dual5090'),required=True)
+    parser.add_argument('--host',action='append',choices=('office','wsl','single5090','dual5090'),required=True)
+    parser.add_argument('--revision',default='HEAD',help='existing commit reachable from main; resume an installation without changing the runtime pin')
     args=parser.parse_args()
-    revision=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()
+    revision=resolve_revision(args.revision)
     if subprocess.check_output(['git','status','--porcelain'],cwd=ROOT,text=True).strip():
         raise ValueError('commit source before deployment')
     store=Store(DSN);store.install()

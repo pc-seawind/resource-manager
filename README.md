@@ -42,4 +42,6 @@ CPU命令入口不接受未准入GPU模型；GPU driver仍须提供实际成功�
 `examples/verify_workspace.py`。
 
 旧生产binding和仍在途请求不热改；目录迁移先登记owner／消费者，再切换、读回和退役。
-WSL当前按用户暂停要求保留pending，未主动探测或重启。
+WSL已获用户2026-11-03恢复通知。补齐冻结runtime用
+`.venv/bin/python deploy.py --host wsl --revision <commit>`；只补目标主机，
+不因部署工具更新而改变应用runtime pin或重复其他主机的成功任务。
