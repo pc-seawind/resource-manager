@@ -33,7 +33,36 @@ CPU命令入口不接受未准入GPU模型；GPU driver仍须提供实际成功�
 项目代码与版本构建在workspace的项目内，任务临时work在数据目录的`<project>/work/<task>`。
 临时work不是产品存储；应用须把唯一结果保存到PG或正式项目数据位置。
 协调器收到退出结果并提交PG后，才删除临时work；运行未知先核对原unit，不能删或异机重推。
-来源／结果／实际owner和恢复状态共用既有PostgreSQL，不每项目建新数据库。
+每节点一个跨项目资源账本；项目不各自建队列。旧部署仍使用Ubuntu既有PG，
+节点本地模式使用本机Unix socket连接独立的`resource_manager`库，PG只保存资源状态，
+不因此复制其他项目的业务数据。
+
+## 节点本地运行与授予权切换
+
+节点配置放`~/.config/resource-manager/node.json`，包含`node_id`、真实`host`、
+物理`device`类别、Unix socket `dsn`及`schema`。`local`只是执行transport，
+5090的物理路径类别仍为`single5090`，不会误用工作站的`~/work`目录。
+
+先准备本地PG和配置，安装的是不可授予资源的pending账本：
+
+```bash
+resource-manager node-install --node-id single5090 --device single5090
+resource-manager node-status
+```
+
+部署controller在旧PG原事务锁下执行`fence-host --host <真实主机名> --node-id single5090`。
+它拒绝交接尚有reserved/running owner的设备，并在旧数据库安装授予权trigger，
+因此旧pin的allocator也不能继续给目标设备分配新资源；其他设备和既有释放路径不变。
+将返回的`fence_id`交给目标节点`node-activate --node-id single5090 --fence-id <id>`后，
+本地allocator才可授予。中途失败不自动退回旧中心，不因超时清掉未知owner。
+
+本地请求的candidate必须使用本机真实`host`和`placement=local`；`run`、
+实际worker、退出证明和清理均使用本地argv，不经SSH。GPU应用仍须使用已准入模型driver，
+不能用CPU通用命令入口绕过准入。节点库的trigger拒绝远端candidate和pending阶段授予，
+同一节点的不同项目仍通过同一个PG事务仲裁。
+
+本切片实现本机执行和旧中心授予权交接；节点之间的高层委托/接单协议尚未实现，
+不将CLI安装或本地账本称作完整跨节点协商服务。
 
 `run`请求包含`project`、`task`、`priority`、带时区绝对`deadline`、`script`、`args`、
 `asset_paths`及已准入`candidates`。candidate的binding包含实际`host`、`placement`、
@@ -42,4 +71,5 @@ CPU命令入口不接受未准入GPU模型；GPU driver仍须提供实际成功�
 `examples/verify_workspace.py`。
 
 旧生产binding和仍在途请求不热改；目录迁移先登记owner／消费者，再切换、读回和退役。
-WSL当前按用户暂停要求保留pending，未主动探测或重启。
+WSL暂停要求已由用户2026-11-05的恢复通知撤回，部署按当次连通性和实际owner接续，
+不自动重启已取消的fleet timer。

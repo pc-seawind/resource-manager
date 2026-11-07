@@ -52,7 +52,7 @@ def run(rt,route,request,probe,*,clock=now):
     seconds=int((request['deadline']-clock()).total_seconds())
     if seconds<=0:raise ValueError('physical execution cannot start after deadline')
     unit='oc-'+key[:24]+'.service'
-    header=dict(project=project,task=task,host=selected['host'],unit=unit,device=selected['placement'],python=selected['python'],
+    header=dict(project=project,task=task,host=selected['host'],unit=unit,device=selected.get('device',selected['placement']),python=selected['python'],
         script=selected['code']+'/'+request['script'],args=request['args'],asset_paths=request['asset_paths'],remaining_seconds=seconds)
     # Persist the deterministic physical intention before a lost SSH response.
     with rt.db() as db:
@@ -108,7 +108,7 @@ def reconcile(rt,route,key,*,clock=now):
 def _cleanup(rt,route,row):
     b=row['binding'];value=dict(row['result'])
     p=subprocess.run(route(b['placement'],[b['resource_runtime'],'retire-work','--project',row['project'],
-        '--task',row['task_key'],'--device',b['placement'],'--unit','oc-'+row['id'][:24]+'.service']),
+        '--task',row['task_key'],'--device',b.get('device',b['placement']),'--unit','oc-'+row['id'][:24]+'.service']),
         capture_output=True,text=True,check=True,timeout=20)
     receipt=json.loads(p.stdout)
     if receipt['retired'] is not True or receipt['path']!=value['cwd']:raise ValueError('workspace retirement differs from physical ACK')
