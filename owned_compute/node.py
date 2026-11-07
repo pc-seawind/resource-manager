@@ -26,7 +26,8 @@ def load_config(path):
     # The database belongs to this device, never a remote central server.
     from psycopg.conninfo import conninfo_to_dict
     dsn = conninfo_to_dict(value['dsn'])
-    if not dsn.get('host', '').startswith('/'):
+    if (not dsn.get('host', '').startswith('/') or ',' in dsn['host']
+            or 'hostaddr' in dsn):
         raise ValueError('node resource ledger requires a local Unix socket')
     return value
 

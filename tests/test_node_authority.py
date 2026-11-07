@@ -105,13 +105,18 @@ def test_fence_cannot_be_reassigned_to_another_node(store):
         node.fence_host(store, 'gpu-host', 'different-node')
 
 
-def test_node_config_requires_local_database_and_actual_host(tmp_path):
+@pytest.mark.parametrize('foreign_dsn', [
+    'dbname=resource_manager host=remote-host',
+    'dbname=resource_manager host=/local,remote-host',
+    'dbname=resource_manager host=/local hostaddr=192.0.2.1',
+])
+def test_node_config_requires_local_database_and_actual_host(tmp_path, foreign_dsn):
     path = tmp_path/'node.json'
     value = dict(node_id='single5090', host=socket.gethostname(), device='single5090',
         dsn='dbname=resource_manager host=/a/local/socket', schema='resource_manager')
     path.write_text(json.dumps(value))
     assert node.load_config(path)['device'] == 'single5090'
-    value['dsn'] = 'dbname=resource_manager host=remote-host'
+    value['dsn'] = foreign_dsn
     path.write_text(json.dumps(value))
     with pytest.raises(ValueError, match='local Unix socket'):
         node.load_config(path)
