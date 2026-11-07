@@ -72,4 +72,6 @@ resource-manager node-status
 
 旧生产binding和仍在途请求不热改；目录迁移先登记owner／消费者，再切换、读回和退役。
 WSL暂停要求已由用户2026-11-05的恢复通知撤回，部署按当次连通性和实际owner接续，
-不自动重启已取消的fleet timer。
+不自动重启已取消的fleet timer。补齐冻结runtime用
+`.venv/bin/python deploy.py --host wsl --revision <commit>`；只补目标主机，
+不因部署工具更新而改变应用runtime pin或重复其他主机的成功任务。
